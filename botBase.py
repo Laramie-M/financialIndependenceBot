@@ -1,5 +1,6 @@
 import sqlite3
 import praw
+import datetime
 
 
 def opendb(name):
@@ -36,13 +37,42 @@ def save(connect):
     connect.close()
 
 def redditConnect():
-    r = praw.Reddit()
-    r.login()
+    r = praw.Reddit(client_id='3cysUO0CfofzUg',
+                     client_secret=input("Input Secret:"),
+                     user_agent='my user agent')
+    return r
+
+def checkedSubmission(id):
+    return False
+
+def submissionGathering(r):
+    subreddit = r.subreddit('financialindependence')
+    for submission in subreddit.new(limit=100):
+        if checkedSubmission(submission.id):
+            pass
+        commentParsing(submission)
+
+def commentParsing(submission):
+    submission.comments.replace_more(limit=0)
+    comment_queue = submission.comments.list()
+    while comment_queue:
+        comment = comment_queue.pop(0)
+        print(comment.permalink())
+        print(" Created: ",datetime.datetime.fromtimestamp(comment.created))
+        print(" Author: ",comment.author)
+
+def startUp():
+    connection, db = opendb("FI_Users.db")
+    db.execute('''CREATE TABLE  IF NOT EXISTS
+                        users (id integer PRIMARY KEY UNIQUE, displayName text, firstPost text)''')
+    r = redditConnect()
+    submissionGathering(r)
+    return connection
+
+
 
 def main():
-    connection, db = opendb("finI2.db")
-    db.execute('''CREATE TABLE  IF NOT EXISTS
-                    users (id integer PRIMARY KEY UNIQUE, displayName text, firstPost text)''')
+    connection = startUp()
     save(connection)
 
 
